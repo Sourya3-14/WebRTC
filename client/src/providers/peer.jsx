@@ -93,7 +93,6 @@ export const PeerProvider = (props) => {
     };
   }, [handleTracakEvent, peer]);
 
-
   return (
     <PeerContext.Provider
       value={{
