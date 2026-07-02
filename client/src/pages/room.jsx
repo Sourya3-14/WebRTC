@@ -47,6 +47,7 @@ const RoomPage = () => {
     async (data) => {
       const { emailId } = data; // 2nd persons email id
 
+      // must be included here
       if (!myStream) {
         console.log("Waiting for local stream...", myStream);
         getUserMediaStream();
@@ -76,6 +77,7 @@ const RoomPage = () => {
 
       const { from, offer } = data;
 
+      // must be included here too
       if (!myStream) {
         console.log("Waiting for local stream...", myStream);
         getUserMediaStream();
@@ -122,6 +124,7 @@ const RoomPage = () => {
   const handleNegotiation = async () => {
     const offer = await createOffer();
 
+    // must be included here too
     if (!myStream) {
       console.log("Waiting for local stream...", myStream);
       getUserMediaStream();
@@ -139,6 +142,7 @@ const RoomPage = () => {
     async ({ from, offer }) => {
       const ans = await createAnswere(offer);
 
+      // must be included here too
       if (!myStream) {
         console.log("Waiting for local stream...", myStream);
         getUserMediaStream();
