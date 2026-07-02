@@ -93,13 +93,6 @@ export const PeerProvider = (props) => {
     };
   }, [handleTracakEvent, peer]);
 
-  // useEffect(()=>{
-  //   peer.onicecandidate = (event) => {
-  //     if (event.candidate) {
-  //       console.log("ICE candidate:", event.candidate);
-  //     }
-  //   };
-  // }, [peer]);
 
   return (
     <PeerContext.Provider
