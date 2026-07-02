@@ -275,8 +275,6 @@ const RoomPage = () => {
             className="w-96 rounded-lg border"
           />
         </div>
-
-        {/* <button onClick={(e) => sendStream(myStream)}>send my video</button> */}
       </div>
     </div>
   );

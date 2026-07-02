@@ -15,12 +15,17 @@ const socket_to_email = new Map();
 
 io.on("connection", (socket) => {
   console.log("new connection");
+
   socket.on("join_room", (data) => {
     const { roomId, emailId } = data;
+
     console.log("user ", emailId, "joined room", roomId);
+
     email_to_socket.set(emailId, socket.id);
     socket_to_email.set(socket.id, emailId);
+
     socket.join(roomId);
+
     socket.emit("joined_room", { roomId });
     socket.broadcast.to(roomId).emit("user_joined", { emailId });
   });
