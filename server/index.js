@@ -94,7 +94,9 @@ io.on("connection", (socket) => {
     const email = socket_to_email.get(socket.id);
 
     if (email) {
-      email_to_socket.delete(email);
+      if (email_to_socket.get(email) === socket.id) {
+        email_to_socket.delete(email);
+      }
       socket_to_email.delete(socket.id);
     }
 

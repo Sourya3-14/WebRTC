@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState } from "react";
+import React, { useMemo, useEffect, useRef, useState } from "react";
 import { useCallback } from "react";
 
 const PeerContext = React.createContext(null);
@@ -7,6 +7,7 @@ export const usePeer = () => React.useContext(PeerContext);
 
 export const PeerProvider = (props) => {
   const [remoteStream, setRemoteStream] = useState(null);
+  const pendingIceCandidates = useRef([]);
 
   //creates stun server requests
   const peer = useMemo(
@@ -32,6 +33,7 @@ export const PeerProvider = (props) => {
     console.log("Offer type:", offer.type);
 
     await peer.setRemoteDescription(offer);
+    await applyPendingIceCandidates();
 
     console.log("After setRemoteDescription:", peer.signalingState);
 
@@ -48,6 +50,7 @@ export const PeerProvider = (props) => {
 
   const setRemoteAnswer = async (ans) => {
     await peer.setRemoteDescription(ans);
+    await applyPendingIceCandidates();
   };
 
   const sendStream = useCallback(
@@ -67,14 +70,23 @@ export const PeerProvider = (props) => {
     [peer],
   );
 
-  const addIceCandidate = async (candidate) => {
+  const addIceCandidate = useCallback(async (candidate) => {
     if (!candidate) return;
 
-    try {
+    if (!peer.remoteDescription) {
+      pendingIceCandidates.current.push(candidate);
+      return;
+    }
+
+    await peer.addIceCandidate(candidate);
+  }, [peer]);
+
+  const applyPendingIceCandidates = async () => {
+    const candidates = pendingIceCandidates.current;
+    pendingIceCandidates.current = [];
+
+    for (const candidate of candidates) {
       await peer.addIceCandidate(candidate);
-      console.log("ICE candidate added");
-    } catch (err) {
-      console.error(err);
     }
   };
 

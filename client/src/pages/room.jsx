@@ -20,20 +20,35 @@ const RoomPage = () => {
 
   const myVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
+  const localStreamRef = useRef(null);
+  const pendingStreamRef = useRef(null);
+  const makingOfferRef = useRef(false);
 
   const [myStream, setMyStream] = useState(null);
   const [remoteEmailId, setRemoteEmailId] = useState();
 
-  const getUserMediaStream = useCallback(async () => {
-    console.log("Requesting media...");
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: true,
-      video: true, 
-    });
+  const getUserMediaStream = useCallback(() => {
+    if (localStreamRef.current) {
+      return Promise.resolve(localStreamRef.current);
+    }
 
-    console.log("Got stream:", stream);
-    await setMyStream(stream);
-  }, [setMyStream]);
+    if (!pendingStreamRef.current) {
+      console.log("Requesting media...");
+      pendingStreamRef.current = navigator.mediaDevices
+        .getUserMedia({ audio: true, video: true })
+        .then((stream) => {
+          localStreamRef.current = stream;
+          setMyStream(stream);
+          console.log("Got stream:", stream);
+          return stream;
+        })
+        .finally(() => {
+          pendingStreamRef.current = null;
+        });
+    }
+
+    return pendingStreamRef.current;
+  }, []);
 
   const handleIceCandidate = useCallback(
     (event) => {
@@ -58,44 +73,32 @@ const RoomPage = () => {
     async (data) => {
       const { emailId } = data; // 2nd persons email id
 
-      // must be included here
-      if (!myStream) {
-        console.log("Waiting for local stream...", myStream);
-        getUserMediaStream();
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+      makingOfferRef.current = true;
+      try {
+        const stream = await getUserMediaStream();
+        setRemoteEmailId(emailId);
+        sendStream(stream);
+
+        const offer = await createOffer();
+
+        socket.emit("call_user", {
+          emailId,
+          offer,
+        });
+      } finally {
+        makingOfferRef.current = false;
       }
-      sendStream(myStream);
-
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      // creates your sdp offer and sets it as local description
-      const offer = await createOffer();
-
-      socket.emit("call_user", {
-        emailId,
-        offer,
-      });
-
-      setRemoteEmailId(emailId);
     },
-    [socket, createOffer, sendStream, myStream, getUserMediaStream],
+    [socket, createOffer, sendStream, getUserMediaStream],
   );
 
   const handleIncomingCall = useCallback(
     async (data) => {
-      console.log("Incoming call received");
-      console.log("myStream at callback start:", myStream);
-
       const { from, offer } = data;
 
-      // must be included here too
-      if (!myStream) {
-        console.log("Waiting for local stream...", myStream);
-        getUserMediaStream();
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-      }
-
-      sendStream(myStream);
+      const stream = await getUserMediaStream();
+      setRemoteEmailId(from);
+      sendStream(stream);
 
       // creates the sdp based on the received sdp and sets remote and local description
       const ans = await createAnswere(offer);
@@ -105,10 +108,8 @@ const RoomPage = () => {
         emailId: from,
         ans,
       });
-
-      setRemoteEmailId(from);
     },
-    [socket, createAnswere, sendStream, myStream, getUserMediaStream],
+    [socket, createAnswere, sendStream, getUserMediaStream],
   );
 
   const handleAcceptedCall = useCallback(
@@ -122,47 +123,46 @@ const RoomPage = () => {
   );
 
   const handleNegotiation = useCallback(async () => {
-    const offer = await createOffer();
-
-    // must be included here too
-    if (!myStream) {
-      console.log("Waiting for local stream...", myStream);
-      getUserMediaStream();
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+    if (
+      makingOfferRef.current ||
+      !remoteEmailId ||
+      peer.signalingState !== "stable"
+    ) {
+      return;
     }
-    sendStream(myStream);
 
-    socket.emit("peer_nego_needed", {
-      offer,
-      emailId: remoteEmailId,
-    });
+    makingOfferRef.current = true;
+    try {
+      const offer = await createOffer();
+
+      socket.emit("peer_nego_needed", {
+        offer,
+        emailId: remoteEmailId,
+      });
+    } finally {
+      makingOfferRef.current = false;
+    }
   }, [
     createOffer,
-    myStream,
-    getUserMediaStream,
-    sendStream,
     socket,
     remoteEmailId,
+    peer,
   ]);
 
   const handleNegoIncoming = useCallback(
     async ({ from, offer }) => {
-      const ans = await createAnswere(offer);
+      const stream = await getUserMediaStream();
+      setRemoteEmailId(from);
+      sendStream(stream);
 
-      // must be included here too
-      if (!myStream) {
-        console.log("Waiting for local stream...", myStream);
-        getUserMediaStream();
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-      }
-      sendStream(myStream);
+      const ans = await createAnswere(offer);
 
       socket.emit("peer_nego_done", {
         emailId: from,
         ans,
       });
     },
-    [createAnswere, socket, myStream, getUserMediaStream, sendStream],
+    [createAnswere, socket, getUserMediaStream, sendStream],
   );
 
   const handleNegoFinal = useCallback(
