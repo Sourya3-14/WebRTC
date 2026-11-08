@@ -13,6 +13,10 @@ const io = new Server(server, {
 
 app.use(bodyParser.json());
 
+app.get("/health", (_req, res) => {
+  res.status(200).json({ status: "ok" });
+});
+
 const email_to_socket = new Map();
 const socket_to_email = new Map();
 
