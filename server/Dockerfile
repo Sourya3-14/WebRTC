@@ -11,6 +11,6 @@ ENV NODE_ENV=production
 
 USER node
 
-EXPOSE 8000 8001
+EXPOSE 8000
 
 CMD ["node", "index.js"]

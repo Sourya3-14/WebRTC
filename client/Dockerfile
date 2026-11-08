@@ -7,7 +7,7 @@ RUN npm ci
 
 COPY . .
 
-ARG REACT_APP_SOCKET_URL=http://localhost:8001
+ARG REACT_APP_SOCKET_URL=http://localhost:8000
 ENV REACT_APP_SOCKET_URL=$REACT_APP_SOCKET_URL
 RUN npm run build
 

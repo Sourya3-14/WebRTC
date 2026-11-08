@@ -7,7 +7,13 @@ export const useSocket = () => React.useContext(SocketContext);
 
 export const SocketProvider = ({ children }) => {
   const socket = useMemo(
-    () => io(process.env.REACT_APP_SOCKET_URL || "http://localhost:8001"),
+    () =>
+      io(
+        process.env.REACT_APP_SOCKET_URL ||
+          (process.env.NODE_ENV === "development"
+            ? "http://localhost:8000"
+            : window.location.origin),
+      ),
     [],
   );
 

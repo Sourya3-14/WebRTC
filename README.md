@@ -6,21 +6,21 @@ Build the backend and frontend images from the repository root:
 
 ```sh
 docker build -t wellnest-webrtc-server ./server
-docker build --build-arg REACT_APP_SOCKET_URL=http://localhost:8001 -t wellnest-webrtc-client ./client
+docker build --build-arg REACT_APP_SOCKET_URL=http://localhost:8000 -t wellnest-webrtc-client ./client
 ```
 
 Run both containers:
 
 ```sh
-docker run -d --name wellnest-webrtc-server -p 8000:8000 -p 8001:8001 wellnest-webrtc-server
+docker run -d --name wellnest-webrtc-server -p 8000:8000 wellnest-webrtc-server
 docker run -d --name wellnest-webrtc-client -p 80:80 wellnest-webrtc-client
 ```
 
-Open `http://localhost`. The backend serves HTTP on port 8000 and Socket.IO on port 8001.
+Open `http://localhost`. The backend serves HTTP and Socket.IO on port 8000.
 
-For a hosted deployment, build the client with `REACT_APP_SOCKET_URL` set to the
-public URL of the Socket.IO service (for example,
-`https://api.example.com`). This value is embedded in the frontend at build time.
-Route that public URL to the backend's port 8001 and configure the hosting
-platform or reverse proxy for WebSocket upgrades and TLS. The app's HTTP API
-listener is on port 8000.
+For a hosted deployment, deploy the backend on a host that supports persistent
+Node.js processes and WebSocket connections. Set the frontend's
+`REACT_APP_SOCKET_URL` environment variable to the backend's public URL (for
+example, `https://your-backend.example.com`) in the frontend hosting settings,
+then redeploy the frontend. Create React App embeds this setting at build time.
+The backend listens on the host-provided `PORT` or port 8000 locally.

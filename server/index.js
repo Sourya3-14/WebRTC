@@ -1,12 +1,15 @@
 const express = require("express");
 const bodyParser = require("body-parser");
+const http = require("http");
 const { Server } = require("socket.io");
 
-const io = new Server({
-  cors: true,
-});
-
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: true,
+  },
+});
 
 app.use(bodyParser.json());
 
@@ -95,5 +98,11 @@ io.on("connection", (socket) => {
   });
 });
 
-app.listen(8000, console.log("http server running at port 8000"));
-io.listen(8001, console.log("socket server running at port 8001"));
+const port = process.env.PORT === undefined ? 8000 : Number(process.env.PORT);
+if (!Number.isInteger(port) || port < 1 || port > 65535) {
+  throw new Error(`Invalid PORT: ${process.env.PORT}`);
+}
+
+server.listen(port, () => {
+  console.log(`http and socket server running at port ${port}`);
+});
