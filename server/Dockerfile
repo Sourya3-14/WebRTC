@@ -1,0 +1,16 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci --omit=dev
+
+COPY --chown=node:node . .
+
+ENV NODE_ENV=production
+
+USER node
+
+EXPOSE 8000 8001
+
+CMD ["node", "index.js"]

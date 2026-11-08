@@ -114,7 +114,7 @@ const RoomPage = () => {
     console.log("Requesting media...");
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: true,
-      video: true,
+      video: true, 
     });
 
     console.log("Got stream:", stream);
@@ -234,32 +234,28 @@ const RoomPage = () => {
   }, [peer, handleIceCandidate, handleNegotiation]);
 
   return (
-    <div className="flex flex-col items-center gap-6 p-6">
-      <h1 className="text-3xl font-bold">
+    <div className="flex flex-col items-center p-6">
+      <h1 className="text-3xl font-bold mb-6">
         Room Page you are connected to : {remoteEmailId}
       </h1>
 
-      <div className="flex gap-8">
-        <div>
-          <h2 className="text-center mb-2 font-semibold">My Video</h2>
-          <video
-            ref={myVideoRef}
-            autoPlay
-            playsInline
-            muted
-            className="w-96 rounded-lg border"
-          />
-        </div>
+      <div className="relative w-[900px] h-[520px] rounded-xl overflow-hidden border bg-black">
+        {/* Remote Video */}
+        <video
+          ref={remoteVideoRef}
+          autoPlay
+          playsInline
+          className="w-full h-full object-cover"
+        />
 
-        <div>
-          <h2 className="text-center mb-2 font-semibold">Remote Video</h2>
-          <video
-            ref={remoteVideoRef}
-            autoPlay
-            playsInline
-            className="w-96 rounded-lg border"
-          />
-        </div>
+        {/* My Video */}
+        <video
+          ref={myVideoRef}
+          autoPlay
+          playsInline
+          muted
+          className="absolute bottom-4 right-4 w-56 h-40 object-cover rounded-lg border-2 border-white shadow-lg bg-black"
+        />
       </div>
     </div>
   );
