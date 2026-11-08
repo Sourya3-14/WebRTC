@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSocket } from "../providers/socket.jsx";
 
@@ -31,33 +31,24 @@ const HomePage = () => {
 
     setJoinError("");
     localStorage.setItem("emailId", emailId);
-    socket.emit("join_room", {
-      roomId: roomCode,
-      emailId,
-    });
+    navigate(`/room/${roomCode}`);
   };
-
-  const handleJoined = useCallback(({ roomId }) => {
-    navigate(`/room/${roomId}`);
-  }, [navigate]);
 
   useEffect(() => {
     const handleConnect = () => setConnectionStatus("connected");
     const handleDisconnect = () => setConnectionStatus("disconnected");
     const handleConnectError = () => setConnectionStatus("disconnected");
 
-    socket.on("joined_room", handleJoined);
     socket.on("connect", handleConnect);
     socket.on("disconnect", handleDisconnect);
     socket.on("connect_error", handleConnectError);
 
     return () => {
-      socket.off("joined_room", handleJoined);
       socket.off("connect", handleConnect);
       socket.off("disconnect", handleDisconnect);
       socket.off("connect_error", handleConnectError);
     };
-  }, [socket, handleJoined]);
+  }, [socket]);
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
       <h1 className="text-3xl font-bold text-center mb-2">Join a Room</h1>

@@ -25,11 +25,25 @@ io.on("connection", (socket) => {
 
   socket.on("join_room", (data) => {
     const { roomId, emailId } = data;
+    if (typeof roomId !== "string" || !roomId || typeof emailId !== "string" || !emailId) {
+      socket.emit("join_error", { message: "A room ID and email are required." });
+      return;
+    }
+
+    const previousSocketId = email_to_socket.get(emailId);
+    if (previousSocketId === socket.id && socket.rooms.has(roomId)) {
+      socket.emit("joined_room", { roomId });
+      return;
+    }
 
     console.log("user ", emailId, "joined room", roomId);
 
     email_to_socket.set(emailId, socket.id);
     socket_to_email.set(socket.id, emailId);
+
+    if (previousSocketId && previousSocketId !== socket.id) {
+      io.sockets.sockets.get(previousSocketId)?.disconnect(true);
+    }
 
     socket.join(roomId);
 

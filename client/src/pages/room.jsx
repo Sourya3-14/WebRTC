@@ -22,7 +22,7 @@ const RoomPage = () => {
   const remoteVideoRef = useRef(null);
   const localStreamRef = useRef(null);
   const pendingStreamRef = useRef(null);
-  const makingOfferRef = useRef(false);
+  const remoteEmailIdRef = useRef();
 
   const [myStream, setMyStream] = useState(null);
   const [remoteEmailId, setRemoteEmailId] = useState();
@@ -52,14 +52,14 @@ const RoomPage = () => {
 
   const handleIceCandidate = useCallback(
     (event) => {
-      if (event.candidate && remoteEmailId) {
+      if (event.candidate && remoteEmailIdRef.current) {
         socket.emit("ice_candidate", {
-          emailId: remoteEmailId,
+          emailId: remoteEmailIdRef.current,
           candidate: event.candidate,
         });
       }
     },
-    [socket, remoteEmailId],
+    [socket],
   );
 
   const handleIncomingIce = useCallback(
@@ -73,21 +73,18 @@ const RoomPage = () => {
     async (data) => {
       const { emailId } = data; // 2nd persons email id
 
-      makingOfferRef.current = true;
-      try {
-        const stream = await getUserMediaStream();
-        setRemoteEmailId(emailId);
-        sendStream(stream);
+      remoteEmailIdRef.current = emailId;
+      setRemoteEmailId(emailId);
 
-        const offer = await createOffer();
+      const stream = await getUserMediaStream();
+      sendStream(stream);
 
-        socket.emit("call_user", {
-          emailId,
-          offer,
-        });
-      } finally {
-        makingOfferRef.current = false;
-      }
+      const offer = await createOffer();
+
+      socket.emit("call_user", {
+        emailId,
+        offer,
+      });
     },
     [socket, createOffer, sendStream, getUserMediaStream],
   );
@@ -96,8 +93,10 @@ const RoomPage = () => {
     async (data) => {
       const { from, offer } = data;
 
-      const stream = await getUserMediaStream();
+      remoteEmailIdRef.current = from;
       setRemoteEmailId(from);
+
+      const stream = await getUserMediaStream();
       sendStream(stream);
 
       // creates the sdp based on the received sdp and sets remote and local description
@@ -122,67 +121,37 @@ const RoomPage = () => {
     [setRemoteAnswer],
   );
 
-  const handleNegotiation = useCallback(async () => {
-    if (
-      makingOfferRef.current ||
-      !remoteEmailId ||
-      peer.signalingState !== "stable"
-    ) {
-      return;
-    }
-
-    makingOfferRef.current = true;
-    try {
-      const offer = await createOffer();
-
-      socket.emit("peer_nego_needed", {
-        offer,
-        emailId: remoteEmailId,
-      });
-    } finally {
-      makingOfferRef.current = false;
-    }
-  }, [
-    createOffer,
-    socket,
-    remoteEmailId,
-    peer,
-  ]);
-
-  const handleNegoIncoming = useCallback(
-    async ({ from, offer }) => {
-      const stream = await getUserMediaStream();
-      setRemoteEmailId(from);
-      sendStream(stream);
-
-      const ans = await createAnswere(offer);
-
-      socket.emit("peer_nego_done", {
-        emailId: from,
-        ans,
-      });
-    },
-    [createAnswere, socket, getUserMediaStream, sendStream],
-  );
-
-  const handleNegoFinal = useCallback(
-    async ({ ans }) => {
-      await setRemoteAnswer(ans);
-    },
-    [setRemoteAnswer],
-  );
-
-  // after redirection check is both data available else resend the join_room event for safety
   useEffect(() => {
     const emailId = localStorage.getItem("emailId");
 
     if (!emailId || !roomId) return;
 
-    socket.emit("join_room", {
-      roomId,
-      emailId,
-    });
-  }, [socket, roomId]);
+    const joinRoom = () => {
+      socket.emit("join_room", { roomId, emailId });
+    };
+
+    socket.on("user_joined", handleNewUSerJoin);
+    socket.on("incomming_call", handleIncomingCall);
+    socket.on("call_accepted", handleAcceptedCall);
+    socket.on("ice_candidate", handleIncomingIce);
+    socket.on("connect", joinRoom);
+    if (socket.connected) joinRoom();
+
+    return () => {
+      socket.off("user_joined", handleNewUSerJoin);
+      socket.off("incomming_call", handleIncomingCall);
+      socket.off("call_accepted", handleAcceptedCall);
+      socket.off("ice_candidate", handleIncomingIce);
+      socket.off("connect", joinRoom);
+    };
+  }, [
+    socket,
+    roomId,
+    handleNewUSerJoin,
+    handleIncomingCall,
+    handleAcceptedCall,
+    handleIncomingIce,
+  ]);
 
   useEffect(() => {
     getUserMediaStream();
@@ -201,34 +170,7 @@ const RoomPage = () => {
   }, [remoteStream]);
 
   useEffect(() => {
-    socket.on("user_joined", handleNewUSerJoin);
-    socket.on("incomming_call", handleIncomingCall);
-    socket.on("call_accepted", handleAcceptedCall);
-    socket.on("ice_candidate", handleIncomingIce);
-    socket.on("peer_nego_needed", handleNegoIncoming);
-    socket.on("peer_nego_final", handleNegoFinal);
-
-    return () => {
-      socket.off("user_joined", handleNewUSerJoin);
-      socket.off("incomming_call", handleIncomingCall);
-      socket.off("call_accepted", handleAcceptedCall);
-      socket.off("ice_candidate", handleIncomingIce);
-      socket.off("peer_nego_needed", handleNegoIncoming);
-      socket.off("peer_nego_final", handleNegoFinal);
-    };
-  }, [
-    handleNegoFinal,
-    handleNegoIncoming,
-    handleIncomingIce,
-    handleAcceptedCall,
-    handleIncomingCall,
-    handleNewUSerJoin,
-    socket,
-  ]);
-
-  useEffect(() => {
     peer.addEventListener("icecandidate", handleIceCandidate);
-    peer.addEventListener("negotiationneeded", handleNegotiation);
 
     peer.oniceconnectionstatechange = () => {
       console.log("ICE:", peer.iceConnectionState);
@@ -236,9 +178,8 @@ const RoomPage = () => {
 
     return () => {
       peer.removeEventListener("icecandidate", handleIceCandidate);
-      peer.removeEventListener("negotiationneeded", handleNegotiation);
     };
-  }, [peer, handleIceCandidate, handleNegotiation]);
+  }, [peer, handleIceCandidate]);
 
   return (
     <div className="flex flex-col items-center p-6">

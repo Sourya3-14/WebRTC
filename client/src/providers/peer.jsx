@@ -22,13 +22,22 @@ export const PeerProvider = (props) => {
     [],
   );
 
-  const createOffer = async () => {
+  const applyPendingIceCandidates = useCallback(async () => {
+    const candidates = pendingIceCandidates.current;
+    pendingIceCandidates.current = [];
+
+    for (const candidate of candidates) {
+      await peer.addIceCandidate(candidate);
+    }
+  }, [peer]);
+
+  const createOffer = useCallback(async () => {
     const offer = await peer.createOffer();
     await peer.setLocalDescription(offer);
     return offer;
-  };
+  }, [peer]);
 
-  const createAnswere = async (offer) => {
+  const createAnswere = useCallback(async (offer) => {
     console.log("Before setRemoteDescription:", peer.signalingState);
     console.log("Offer type:", offer.type);
 
@@ -46,12 +55,12 @@ export const PeerProvider = (props) => {
     console.log("After setLocalDescription:", peer.signalingState);
 
     return answer;
-  };
+  }, [peer, applyPendingIceCandidates]);
 
-  const setRemoteAnswer = async (ans) => {
+  const setRemoteAnswer = useCallback(async (ans) => {
     await peer.setRemoteDescription(ans);
     await applyPendingIceCandidates();
-  };
+  }, [peer, applyPendingIceCandidates]);
 
   const sendStream = useCallback(
     (stream) => {
@@ -80,15 +89,6 @@ export const PeerProvider = (props) => {
 
     await peer.addIceCandidate(candidate);
   }, [peer]);
-
-  const applyPendingIceCandidates = async () => {
-    const candidates = pendingIceCandidates.current;
-    pendingIceCandidates.current = [];
-
-    for (const candidate of candidates) {
-      await peer.addIceCandidate(candidate);
-    }
-  };
 
   const handleTracakEvent = useCallback((ev) => {
     console.log("TRACK EVENT", ev);
