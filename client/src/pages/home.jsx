@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSocket } from "../providers/socket.jsx";
 
@@ -18,10 +18,10 @@ const HomePage = () => {
     });
   };
 
-  const handleJoined = ({ roomId }) => {
+  const handleJoined = useCallback(({ roomId }) => {
     // console.log("room joined", roomId);
     navigate(`/room/${roomId}`);
-  };
+  }, [navigate]);
 
   useEffect(() => {
     socket.on("joined_room", handleJoined);
@@ -29,7 +29,7 @@ const HomePage = () => {
     return () => {
       socket.off("joined_room", handleJoined);
     };
-  }, [socket]);
+  }, [socket, handleJoined]);
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
       <h1 className="text-3xl font-bold text-center mb-2">Join a Room</h1>

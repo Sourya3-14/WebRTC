@@ -24,6 +24,17 @@ const RoomPage = () => {
   const [myStream, setMyStream] = useState(null);
   const [remoteEmailId, setRemoteEmailId] = useState();
 
+  const getUserMediaStream = useCallback(async () => {
+    console.log("Requesting media...");
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+      video: true, 
+    });
+
+    console.log("Got stream:", stream);
+    await setMyStream(stream);
+  }, [setMyStream]);
+
   const handleIceCandidate = useCallback(
     (event) => {
       if (event.candidate && remoteEmailId) {
@@ -67,7 +78,7 @@ const RoomPage = () => {
 
       setRemoteEmailId(emailId);
     },
-    [socket, createOffer, sendStream, myStream],
+    [socket, createOffer, sendStream, myStream, getUserMediaStream],
   );
 
   const handleIncomingCall = useCallback(
@@ -97,7 +108,7 @@ const RoomPage = () => {
 
       setRemoteEmailId(from);
     },
-    [socket, createAnswere, sendStream, myStream],
+    [socket, createAnswere, sendStream, myStream, getUserMediaStream],
   );
 
   const handleAcceptedCall = useCallback(
@@ -110,18 +121,7 @@ const RoomPage = () => {
     [setRemoteAnswer],
   );
 
-  const getUserMediaStream = useCallback(async () => {
-    console.log("Requesting media...");
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: true,
-      video: true, 
-    });
-
-    console.log("Got stream:", stream);
-    await setMyStream(stream);
-  }, [setMyStream]);
-
-  const handleNegotiation = async () => {
+  const handleNegotiation = useCallback(async () => {
     const offer = await createOffer();
 
     // must be included here too
@@ -136,7 +136,14 @@ const RoomPage = () => {
       offer,
       emailId: remoteEmailId,
     });
-  };
+  }, [
+    createOffer,
+    myStream,
+    getUserMediaStream,
+    sendStream,
+    socket,
+    remoteEmailId,
+  ]);
 
   const handleNegoIncoming = useCallback(
     async ({ from, offer }) => {
@@ -155,7 +162,7 @@ const RoomPage = () => {
         ans,
       });
     },
-    [createAnswere, socket],
+    [createAnswere, socket, myStream, getUserMediaStream, sendStream],
   );
 
   const handleNegoFinal = useCallback(

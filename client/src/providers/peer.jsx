@@ -1,6 +1,5 @@
 import React, { useMemo, useEffect, useState } from "react";
 import { useCallback } from "react";
-import { useDeferredValue } from "react";
 
 const PeerContext = React.createContext(null);
 
